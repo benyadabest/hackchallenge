@@ -46,28 +46,33 @@ app.get("/feed", async (req, res) => {
 });
 
 app.get("/users/:username", async (req, res) => {
-    const username = req.params.username
-    const usernameQuery = await pool.query(
-        `SELECT *
-        FROM users
-        WHERE username = $1
-        `, [username]
-    )
-    if (usernameQuery.rows.length === 0) {
-        await pool.query(
-            `INSERT INTO users(username)
-            VALUES($1)
-            `, [username]
-        )
-        const usernameInsertQuery = await pool.query(
+    try {
+        const username = req.params.username
+        const usernameQuery = await pool.query(
             `SELECT *
             FROM users
             WHERE username = $1
             `, [username]
         )
-        res.json(usernameInsertQuery.rows[0])
-    } else {
-        res.json(usernameQuery.rows[0])
+        if (usernameQuery.rows.length === 0) {
+            await pool.query(
+                `INSERT INTO users(username)
+                VALUES($1)
+                `, [username]
+            )
+            const usernameInsertQuery = await pool.query(
+                `SELECT *
+                FROM users
+                WHERE username = $1
+                `, [username]
+            )
+            res.json(usernameInsertQuery.rows[0])
+        } else {
+            res.json(usernameQuery.rows[0])
+        }
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ error: "Internal server error" })
     }
 });
 
@@ -76,23 +81,28 @@ app.post("/generate", (req, res) => {
 });
 
 app.delete("/images/:id", async (req, res) => {
-    const imageID = req.params.id
-    const userID = req.body
-    const findImage = await pool.query(
-        `SELECT *
-        FROM images
-        WHERE id = $1
-        `, [imageID]
-    )
-    const imageToUserID = findImage.rows[0].user_id
-    if (imageToUserID != userID.user_id) {
-        res.status(403).json({ error: "Specified user is not the owner of this image!"})
-    } else {
-        await pool.query(
-            `DELETE FROM images
+    try {
+        const imageID = req.params.id
+        const userID = req.body
+        const findImage = await pool.query(
+            `SELECT *
+            FROM images
             WHERE id = $1
             `, [imageID]
         )
-        res.status(200).json({ success: true })
+        const imageToUserID = findImage.rows[0].user_id
+        if (imageToUserID != userID.user_id) {
+            res.status(403).json({ error: "Specified user is not the owner of this image!"})
+        } else {
+            await pool.query(
+                `DELETE FROM images
+                WHERE id = $1
+                `, [imageID]
+            )
+            res.status(200).json({ success: true })
+        }
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ error: "Interal server error" })
     }
 });
