@@ -1,10 +1,14 @@
 const express = require("express");
 const pool = require("./db/db")
+const { generateImageEdit, XaiApiError } = require("./xai");
 const cors = require("cors");
 require('dotenv').config()
 const app = express();
 app.use(express.json())
 app.use(cors())
+
+const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const MAX_IMAGE_BASE64_LENGTH = 10 * 1024 * 1024;
 
 app.get("/", (req, res) => {
     res.send("Hello world");
@@ -76,33 +80,74 @@ app.get("/users/:username", async (req, res) => {
     }
 });
 
-app.post("/generate", (req, res) => {
+app.post("/generate", async (req, res) => {
+    try {
+        const { user_id, prompt, image_base64, mime_type } = req.body;
+        if (!user_id || !prompt || !image_base64 || !mime_type) {
+            return res.status(400).json({ error: "Missing required fields: user_id, prompt, image_base64, mime_type" });
+        }
 
+        if (!ALLOWED_MIME_TYPES.has(mime_type)) {
+            return res.status(400).json({ error: "Invalid mime_type. Allowed: image/png, image/jpeg, image/webp" });
+        }
+
+        if (image_base64.length > MAX_IMAGE_BASE64_LENGTH) {
+            return res.status(413).json({ error: "image_base64 payload too large" });
+        }
+
+        const imageUrl = await generateImageEdit({ prompt, image_base64, mime_type });
+
+        const insertQuery = await pool.query(
+            `INSERT INTO images (user_id, prompt, image_url, is_public)
+            VALUES ($1, $2, $3, true)
+            RETURNING id, image_url, prompt, created_at
+            `,
+            [user_id, prompt, imageUrl]
+        );
+
+        return res.status(201).json(insertQuery.rows[0]);
+    } catch (err) {
+        if (err instanceof XaiApiError) {
+            return res.status(err.statusCode).json({ error: err.message });
+        }
+        console.error(err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 });
 
 app.delete("/images/:id", async (req, res) => {
     try {
         const imageID = req.params.id
-        const userID = req.body
+        const { user_id } = req.body
+
+        if (!user_id) {
+            return res.status(400).json({ error: "Missing required field: user_id" })
+        }
+
         const findImage = await pool.query(
             `SELECT *
             FROM images
             WHERE id = $1
             `, [imageID]
         )
+
+        if (findImage.rows.length === 0) {
+            return res.status(404).json({ error: "Image not found" })
+        }
+
         const imageToUserID = findImage.rows[0].user_id
-        if (imageToUserID != userID.user_id) {
-            res.status(403).json({ error: "Specified user is not the owner of this image!"})
+        if (imageToUserID != user_id) {
+            return res.status(403).json({ error: "Specified user is not the owner of this image!"})
         } else {
             await pool.query(
                 `DELETE FROM images
                 WHERE id = $1
                 `, [imageID]
             )
-            res.status(200).json({ success: true })
+            return res.status(200).json({ success: true })
         }
     } catch (err) {
         console.error(err)
-        res.status(500).json({ error: "Interal server error" })
+        return res.status(500).json({ error: "Internal server error" })
     }
 });
