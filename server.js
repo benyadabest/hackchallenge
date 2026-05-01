@@ -1,8 +1,8 @@
 const express = require("express");
+require('dotenv').config()
 const pool = require("./db/db")
 const { generateImageEdit, XaiApiError } = require("./xai");
 const cors = require("cors");
-require('dotenv').config()
 const app = express();
 app.use(express.json())
 app.use(cors())
