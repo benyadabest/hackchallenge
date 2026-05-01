@@ -96,3 +96,14 @@ Then open `hack-challenge.xcodeproj` in Xcode and build. Confirm `APIService.bas
 | `GET` | `/users/:user_id/images?viewer_id=` | A user's images. Owner sees public + private; others see public only |
 | `POST` | `/generate` | `{ user_id, prompt, image_base64, mime_type, is_public }` → xAI image edit |
 | `DELETE` | `/images/:id` | Body `{ user_id }`. Owner only |
+
+---
+
+## Frontend description — Ben Shvartsman
+
+- **Three-tab SwiftUI app** (Feed / Camera / Profile) with a custom bottom tab bar
+- **Feed**: Pinterest-style masonry grid with For You / Following / Trending / Recent filter tabs; auto-refreshes after a new generation completes
+- **Camera flow**: native iOS photo picker → Generate screen with six horizontally-scrolling style chips (Cornellian · Anime · Oil Painting · Astronaut · Politician · Noir) → in-flight loading state → Result screen with Save to Roll and Done
+- **Profile**: `@username` header, image count, masonry grid of all the user's images (public + private), and Logout
+- **Auth**: bottom-sheet username login (find-or-create, no password), session persisted in `UserDefaults` across launches; auth-gated on Camera and Profile tabs, Feed is open
+- **Networking**: `URLSession` async/await against the Express backend at `localhost:3001`; `JSONDecoder` with snake_case → camelCase; base64-encoded JPEG upload for `POST /generate`; `AsyncImage` loads xAI-hosted result URLs ([imgen.x.ai](https://imgen.x.ai)); save-to-roll via `UIImageWriteToSavedPhotosAlbum`
