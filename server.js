@@ -4,7 +4,7 @@ const pool = require("./db/db")
 const { generateImageEdit, XaiApiError } = require("./xai");
 const cors = require("cors");
 const app = express();
-app.use(express.json())
+app.use(express.json({ limit: "12mb" }))
 app.use(cors())
 
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -150,4 +150,11 @@ app.delete("/images/:id", async (req, res) => {
         console.error(err)
         return res.status(500).json({ error: "Internal server error" })
     }
+});
+
+app.use((err, req, res, next) => {
+    if (err?.type === "entity.too.large") {
+        return res.status(413).json({ error: "Request body too large" });
+    }
+    return next(err);
 });
