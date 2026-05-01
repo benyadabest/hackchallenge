@@ -1,17 +1,13 @@
-//
-//  hack_challengeApp.swift
-//  hack-challenge
-//
-//  Created by Ben Shvartsman on 4/26/26.
-//
-
 import SwiftUI
 
 @main
 struct hack_challengeApp: App {
+    @State private var session = UserSession()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootTabView()
+                .environment(session)
         }
     }
 }

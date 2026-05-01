@@ -1,24 +1,36 @@
-//
-//  ContentView.swift
-//  hack-challenge
-//
-//  Created by Ben Shvartsman on 4/26/26.
-//
-
 import SwiftUI
 
-struct ContentView: View {
+extension Notification.Name {
+    static let postCreated = Notification.Name("postCreated")
+}
+
+struct RootTabView: View {
+    @State private var selectedTab = 0
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView(selection: $selectedTab) {
+            FeedView()
+                .tabItem {
+                    Label("Feed", systemImage: "house")
+                }
+                .tag(0)
+
+            CameraTabView(selectedTab: $selectedTab)
+                .tabItem {
+                    Label("Camera", systemImage: "camera")
+                }
+                .tag(1)
+
+            ProfileView()
+                .tabItem {
+                    Label("Profile", systemImage: "person")
+                }
+                .tag(2)
         }
-        .padding()
     }
 }
 
 #Preview {
-    ContentView()
+    RootTabView()
+        .environment(UserSession())
 }

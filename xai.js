@@ -45,8 +45,10 @@ async function generateImageEdit({ prompt, image_base64, mime_type }) {
             body: JSON.stringify({
                 model: "grok-imagine-image",
                 prompt,
-                image_base64,
-                mime_type
+                image: {
+                    type: "image_url",
+                    url: `data:${mime_type};base64,${image_base64}`
+                }
             })
         });
     } catch (_) {
